@@ -10,6 +10,12 @@
 
 <p>This script is tailored for Linux-based systems to automate the backup process of Docker containers along with their respective volumes. Unfortunately, it is not compatible with Windows. The script operates by halting the running containers, backing up their configurations and volumes, and subsequently restarting the containers in a designated order or all at once if no order is delineated.</p>
 
+<p>
+    <img src="docker_backup_notification.jpg" alt="Docker Backup Notification Screenshot" style="width:50%; display: block; margin-left: auto; margin-right: auto;">
+    <i style="display: block; text-align: center;">Above is a screenshot illustrating how the notifications appear on Pushover.</i>
+</p>
+
+
 <h2>Prerequisites</h2>
 
 <p>Ensure the following prerequisites are satisfied before executing the script:</p>
