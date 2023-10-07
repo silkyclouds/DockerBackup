@@ -96,11 +96,12 @@ def main():
     os.rename(temp_backup_path, os.path.join(current_backup_dir, "docker_volumes.tar.gz"))
 
     for dir_to_backup in ADDITIONAL_DIRECTORIES_TO_BACKUP:
-    print(f"Backing up directory {dir_to_backup}...")
-    backup_name = os.path.basename(dir_to_backup) + ".tar.gz"
-    temp_backup_path = os.path.join(TEMP_BACKUP_DIR, backup_name)
-    subprocess.run(["tar", "--use-compress-program=pigz", "-cvf", temp_backup_path, dir_to_backup])
-    os.rename(temp_backup_path, os.path.join(current_backup_dir, backup_name))
+        print(f"Backing up directory {dir_to_backup}...")
+        backup_name = os.path.basename(dir_to_backup) + ".tar.gz"
+        temp_backup_path = os.path.join(TEMP_BACKUP_DIR, backup_name)
+        subprocess.run(["tar", "--use-compress-program=pigz", "-cvf", temp_backup_path, dir_to_backup])
+        os.rename(temp_backup_path, os.path.join(current_backup_dir, backup_name))
+
     
     print(f"Restarting {len(CONTAINERS_IN_ORDER)} containers in specified order...")
     for container_name in CONTAINERS_IN_ORDER:
