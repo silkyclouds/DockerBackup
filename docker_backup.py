@@ -104,7 +104,7 @@ def main():
             os.rename(temp_backup_path, os.path.join(current_backup_dir, backup_name))
         except subprocess.CalledProcessError:
             print(f"Error while backing up {dir_to_backup}. Skipping.")
-    
+
     print(f"Restarting {len(CONTAINERS_IN_ORDER)} containers in specified order...")
     for container_name in CONTAINERS_IN_ORDER:
         if container_name in all_containers_names:
