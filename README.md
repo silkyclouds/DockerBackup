@@ -16,8 +16,6 @@
     <i>Above is a screenshot illustrating how the notifications appear on Pushover.</i>
 </div>
 
-
-
 <h2>Prerequisites</h2>
 
 <p>Ensure the following prerequisites are satisfied before executing the script:</p>
@@ -53,7 +51,14 @@ MAX_BACKUPS = 8
 # Specify the directory path where your Docker volumes are located.
 DOCKER_VOLUME_DIR = "/path/to/your/docker_volumes"
 
-# Below settings are optional
+# Additional directories to backup (Optional)
+# If you have any additional directories you want to backup alongside your Docker volumes, specify them here.
+# The backups will be named after the directory's base name and stored in the same location as other backups.
+ADDITIONAL_DIRECTORIES_TO_BACKUP = [
+    "/path/to/first/directory",
+    "/path/to/second/directory",
+    # Add as many directories as you wish.
+]
 
 # Off-site backup destination using rclone
 # Specify the rclone remote name and path where backups should be copied.
@@ -83,6 +88,7 @@ CONTAINERS_IN_ORDER = ["mosquitto", "zigbee2mqtt", "esphome", "homeassistant"]
     <li><strong>Stopping Containers:</strong> All running Docker containers are halted.</li>
     <li><strong>Configuration Backup:</strong> Each container's configuration is backed up as a JSON file.</li>
     <li><strong>Data Backup:</strong> Docker volumes are compressed into a tar.gz file using pigz for faster compression.</li>
+    <li><strong>Additional Directory Backup:</strong> Any additional directories specified in the configuration are backed up.</li>
     <li><strong>Restarting Containers:</strong> Containers are restarted in the order specified or all at once if no order is provided.</li>
     <li><strong>Off-site Backup (Optional):</strong> If configured, the backup directory is copied to a remote location using rclone.</li>
     <li><strong>Local Backup Cleanup:</strong> Older local backups are deleted, ensuring only a specified number of backups are retained.</li>
