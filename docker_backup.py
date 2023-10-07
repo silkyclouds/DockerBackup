@@ -99,9 +99,11 @@ def main():
         print(f"Backing up directory {dir_to_backup}...")
         backup_name = os.path.basename(dir_to_backup) + ".tar.gz"
         temp_backup_path = os.path.join(TEMP_BACKUP_DIR, backup_name)
-        subprocess.run(["tar", "--use-compress-program=pigz", "-cvf", temp_backup_path, dir_to_backup])
-        os.rename(temp_backup_path, os.path.join(current_backup_dir, backup_name))
-
+        try:
+            result = subprocess.run(["tar", "--use-compress-program=pigz", "-cvf", temp_backup_path, dir_to_backup], check=True)
+            os.rename(temp_backup_path, os.path.join(current_backup_dir, backup_name))
+        except subprocess.CalledProcessError:
+            print(f"Error while backing up {dir_to_backup}. Skipping.")
     
     print(f"Restarting {len(CONTAINERS_IN_ORDER)} containers in specified order...")
     for container_name in CONTAINERS_IN_ORDER:
