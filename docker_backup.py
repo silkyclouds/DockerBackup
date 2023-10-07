@@ -76,7 +76,16 @@ def main():
     result = subprocess.run(["docker", "ps", "-q"], capture_output=True)
     all_containers_ids = result.stdout.decode().split()
     all_containers_names = [subprocess.run(["docker", "inspect", "--format='{{.Name}}'", container_id], capture_output=True, text=True).stdout.strip("' \n") for container_id in all_containers_ids]
-
+    
+    # Backup configurations before stopping the containers
+    for container_id, container_name in zip(all_containers_ids, all_containers_names):
+        print(f"Backing up configuration for {container_name} ({container_id})...")
+        config_filename = container_name + "_config.json"
+        config_path = os.path.join(TEMP_BACKUP_DIR, config_filename)
+        with open(config_path, "wb") as f:
+            subprocess.run(["docker", "inspect", container_id], stdout=f)
+        os.rename(config_path, os.path.join(current_backup_dir, config_filename))
+    
     print(f"Gracefully stopping {len(all_containers_ids)} containers...")
     for container_id, container_name in zip(all_containers_ids, all_containers_names):
         print(f"Stopping {container_name} ({container_id})...")
