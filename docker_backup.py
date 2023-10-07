@@ -76,7 +76,7 @@ def main():
     result = subprocess.run(["docker", "ps", "-q"], capture_output=True)
     all_containers_ids = result.stdout.decode().split()
     all_containers_names = [subprocess.run(["docker", "inspect", "--format='{{.Name}}'", container_id], capture_output=True, text=True).stdout.strip("' \n") for container_id in all_containers_ids]
-    
+
     # Backup configurations before stopping the containers
     for container_id, container_name in zip(all_containers_ids, all_containers_names):
         print(f"Backing up configuration for {container_name} ({container_id})...")
@@ -84,25 +84,16 @@ def main():
         config_path = os.path.join(TEMP_BACKUP_DIR, config_filename)
         with open(config_path, "wb") as f:
             subprocess.run(["docker", "inspect", container_id], stdout=f)
-        os.rename(config_path, os.path.join(current_backup_dir, config_filename))
-    
+
     print(f"Gracefully stopping {len(all_containers_ids)} containers...")
     for container_id, container_name in zip(all_containers_ids, all_containers_names):
         print(f"Stopping {container_name} ({container_id})...")
         subprocess.run(["docker", "stop", container_id])
 
-    for container_id, container_name in zip(all_containers_ids, all_containers_names):
-        print(f"Backing up configuration for {container_name} ({container_id})...")
-        config_filename = container_name + "_config.json"
-        config_path = os.path.join(TEMP_BACKUP_DIR, config_filename)
-        with open(config_path, "wb") as f:
-            subprocess.run(["docker", "inspect", container_id], stdout=f)
-        os.rename(config_path, os.path.join(current_backup_dir, config_filename))
-
-    print("Backing up docker volumes...")
-    temp_backup_path = os.path.join(TEMP_BACKUP_DIR, "docker_volumes.tar.gz")
-    subprocess.run(["tar", "--use-compress-program=pigz", "-cvf", temp_backup_path, DOCKER_VOLUME_DIR])
-    os.rename(temp_backup_path, os.path.join(current_backup_dir, "docker_volumes.tar.gz"))
+    print("Backing up docker volumes and configurations...")
+    temp_backup_path = os.path.join(TEMP_BACKUP_DIR, "docker_backup.tar.gz")
+    subprocess.run(["tar", "--use-compress-program=pigz", "-cvf", temp_backup_path, DOCKER_VOLUME_DIR] + [os.path.join(TEMP_BACKUP_DIR, container_name + "_config.json") for container_name in all_containers_names])
+    os.rename(temp_backup_path, os.path.join(current_backup_dir, "docker_backup.tar.gz"))
 
     for dir_to_backup in ADDITIONAL_DIRECTORIES_TO_BACKUP:
         print(f"Backing up directory {dir_to_backup}...")
@@ -127,7 +118,6 @@ def main():
         print(f"Starting {container_name}...")
         start_container(container_name)
 
-        # ...
     upload_status_icon = "⚠️ Skipped"
     if RCLONE_DESTINATION:
         print(f"Starting rclone copy to {os.path.join(RCLONE_DESTINATION, timestamp)}...")
@@ -138,7 +128,6 @@ def main():
         rclone_output = rclone_result.stdout.decode() + rclone_result.stderr.decode()
         upload_status_icon = "✅" if "Failed to copy" not in rclone_output else "❌"
         print("Rclone copy finished.")
-    # ...
 
 
     all_backups = sorted(os.listdir(BASE_BACKUP_DIR))
