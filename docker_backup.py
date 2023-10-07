@@ -67,6 +67,27 @@ def wait_for_container(container_name):
 def start_container(container_name):
     subprocess.run(["docker", "start", container_name])
 
+def log_backup_details(timestamp, backup_name, backup_size, cloud_path=None):
+    """Log backup details to a log file."""
+    log_entry = f"Date: {timestamp}, Size: {backup_size:.2f} MB, Local Path: {os.path.join(BASE_BACKUP_DIR, timestamp, backup_name)}"
+
+    if cloud_path:
+        log_entry += f", Cloud Path: {os.path.join(cloud_path, backup_name)}"
+
+    log_entry += "\n"
+
+    # Log locally
+    with open(os.path.join(BASE_BACKUP_DIR, "backup_log.txt"), "a") as log_file:
+        log_file.write(log_entry)
+
+    # Log on cloud if RCLONE_DESTINATION is set
+    if RCLONE_DESTINATION:
+        with open(os.path.join(TEMP_BACKUP_DIR, "backup_log.txt"), "w") as temp_log_file:
+            temp_log_file.write(log_entry)
+
+        subprocess.run(["rclone", "copy", os.path.join(TEMP_BACKUP_DIR, "backup_log.txt"), os.path.join(RCLONE_DESTINATION, "backup_log.txt")])
+        os.remove(os.path.join(TEMP_BACKUP_DIR, "backup_log.txt"))
+
 def main():
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
     current_backup_dir = os.path.join(BASE_BACKUP_DIR, timestamp)
@@ -95,6 +116,11 @@ def main():
     subprocess.run(["tar", "--use-compress-program=pigz", "-cvf", temp_backup_path, DOCKER_VOLUME_DIR] + [os.path.join(TEMP_BACKUP_DIR, container_name + "_config.json") for container_name in all_containers_names])
     os.rename(temp_backup_path, os.path.join(current_backup_dir, "docker_backup.tar.gz"))
 
+    # Logging docker volumes backup details
+    backup_name = "docker_backup.tar.gz"
+    backup_size = os.path.getsize(os.path.join(current_backup_dir, backup_name))
+    log_backup_details(timestamp, backup_name, backup_size, os.path.join(RCLONE_DESTINATION, timestamp, backup_name))
+
     for dir_to_backup in ADDITIONAL_DIRECTORIES_TO_BACKUP:
         print(f"Backing up directory {dir_to_backup}...")
         backup_name = os.path.basename(dir_to_backup) + ".tar.gz"
@@ -102,6 +128,10 @@ def main():
         try:
             result = subprocess.run(["tar", "--use-compress-program=pigz", "-cvf", temp_backup_path, dir_to_backup], check=True)
             os.rename(temp_backup_path, os.path.join(current_backup_dir, backup_name))
+
+            # Logging additional directory backup details
+            backup_size = os.path.getsize(os.path.join(current_backup_dir, backup_name))
+            log_backup_details(timestamp, backup_name, backup_size, os.path.join(RCLONE_DESTINATION, timestamp, backup_name))
         except subprocess.CalledProcessError:
             print(f"Error while backing up {dir_to_backup}. Skipping.")
 
@@ -129,6 +159,11 @@ def main():
         upload_status_icon = "✅" if "Failed to copy" not in rclone_output else "❌"
         print("Rclone copy finished.")
 
+        # Copying the log file to the cloud destination
+        rclone_result = subprocess.run(
+            ["rclone", "copy", os.path.join(BASE_BACKUP_DIR, "backup_log.txt"), os.path.join(RCLONE_DESTINATION)],
+            capture_output=True
+        )
 
     all_backups = sorted(os.listdir(BASE_BACKUP_DIR))
     while len(all_backups) > MAX_BACKUPS:
