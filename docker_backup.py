@@ -23,6 +23,12 @@ MAX_BACKUPS = 8
 # Directory containing Docker volumes / data
 DOCKER_VOLUME_DIR = "/path/to/your/docker_volumes"
 
+ADDITIONAL_DIRECTORIES_TO_BACKUP = [
+"/path/to/first/directory",
+"/path/to/second/directory",
+# you can add as many folders as you want here.
+]
+
 # Below settings are optional, you can add a rclone mounted cloud drive in order to enable off-site backups
 # and receive push notifications when a backup job is finished (using pushover)
 RCLONE_DESTINATION = "your_cloud_drive:Backups/"
@@ -89,6 +95,13 @@ def main():
     subprocess.run(["tar", "--use-compress-program=pigz", "-cvf", temp_backup_path, DOCKER_VOLUME_DIR])
     os.rename(temp_backup_path, os.path.join(current_backup_dir, "docker_volumes.tar.gz"))
 
+    for dir_to_backup in ADDITIONAL_DIRECTORIES_TO_BACKUP:
+    print(f"Backing up directory {dir_to_backup}...")
+    backup_name = os.path.basename(dir_to_backup) + ".tar.gz"
+    temp_backup_path = os.path.join(TEMP_BACKUP_DIR, backup_name)
+    subprocess.run(["tar", "--use-compress-program=pigz", "-cvf", temp_backup_path, dir_to_backup])
+    os.rename(temp_backup_path, os.path.join(current_backup_dir, backup_name))
+    
     print(f"Restarting {len(CONTAINERS_IN_ORDER)} containers in specified order...")
     for container_name in CONTAINERS_IN_ORDER:
         if container_name in all_containers_names:
