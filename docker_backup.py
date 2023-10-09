@@ -40,6 +40,9 @@ PUSHOVER_USER_KEY = "YourUserKeyHere"
 # To get the list of running containers and their names, use the command: docker ps --format '{{.Names}}'
 CONTAINERS_IN_ORDER = ["mosquitto", "zigbee2mqtt", "esphome", "homeassistant"]
 
+# Name of the container running the backup script (to avoid stopping it)
+BACKUP_CONTAINER_NAME = "backup_container_name_here"
+
 ######################################
 
 def send_pushover_notification(message):
@@ -106,10 +109,19 @@ def main():
         with open(config_path, "wb") as f:
             subprocess.run(["docker", "inspect", container_id], stdout=f)
 
-    print(f"Gracefully stopping {len(all_containers_ids)} containers...")
-    for container_id, container_name in zip(all_containers_ids, all_containers_names):
-        print(f"Stopping {container_name} ({container_id})...")
-        subprocess.run(["docker", "stop", container_id])
+    # Fetching container IDs and names
+    result = subprocess.run(["docker", "ps", "-q"], capture_output=True)
+    all_containers_ids = result.stdout.decode().split()
+    all_containers_names = [subprocess.run(["docker", "inspect", "--format='{{.Name}}'", container_id], capture_output=True, text=True).stdout.strip("' \n") for container_id in all_containers_ids]
+
+    if not BACKUP_CONTAINER_NAME:
+        print("WARNING: BACKUP_CONTAINER_NAME is not configured. The script might stop the container it's running in.")
+    else:
+        print(f"Gracefully stopping {len(all_containers_ids)} containers, excluding {BACKUP_CONTAINER_NAME}...")
+        for container_id, container_name in zip(all_containers_ids, all_containers_names):
+            if container_name != BACKUP_CONTAINER_NAME:
+                print(f"Stopping {container_name} ({container_id})...")
+                subprocess.run(["docker", "stop", container_id])
 
     print("Backing up docker volumes and configurations...")
     temp_backup_path = os.path.join(TEMP_BACKUP_DIR, "docker_backup.tar.gz")
